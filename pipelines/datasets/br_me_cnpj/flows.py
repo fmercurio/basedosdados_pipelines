@@ -29,6 +29,10 @@ from pipelines.utils.tasks import (
     rename_current_flow_run_dataset_table,
     run_dbt,
 )
+from pipelines.utils.tasks_postgres import (
+    create_table_dev_postgres,
+    create_table_prod_postgres,
+)
 
 with Flow(
     name="br_me_cnpj.empresas",
@@ -71,29 +75,23 @@ with Flow(
             max_folder_date=max_folder_date,
             max_last_modified_date=max_last_modified_date,
         )
-        wait_upload_table = create_table_dev_and_upload_to_gcs(
+        wait_upload_table = create_table_dev_postgres(
             data_path=output_filepath,
             dataset_id=dataset_id,
             table_id=table_id,
             dump_mode="append",
+            schema="dev",
             upstream_tasks=[output_filepath],
         )
 
-        wait_for_materialization = run_dbt(
-            dataset_id=dataset_id,
-            table_id=table_id,
-            dbt_alias=dbt_alias,
-            dbt_command="run/test",
-            disable_elementary=False,
-            upstream_tasks=[wait_upload_table],
-        )
         with case(materialize_after_dump, True):
-            wait_upload_prod = create_table_prod_gcs_and_run_dbt(
+            wait_upload_prod = create_table_prod_postgres(
                 data_path=output_filepath,
                 dataset_id=dataset_id,
                 table_id=table_id,
                 dump_mode="append",
-                upstream_tasks=[wait_for_materialization],
+                schema="public",
+                upstream_tasks=[wait_upload_table],
             )
 
             update_django_metadata(
@@ -155,28 +153,22 @@ with Flow(
             max_folder_date=max_folder_date,
             max_last_modified_date=max_last_modified_date,
         )
-        wait_upload_table = create_table_dev_and_upload_to_gcs(
+        wait_upload_table = create_table_dev_postgres(
             data_path=output_filepath,
             dataset_id=dataset_id,
             table_id=table_id,
             dump_mode="append",
+            schema="dev",
             upstream_tasks=[output_filepath],
         )
-        wait_for_materialization = run_dbt(
-            dataset_id=dataset_id,
-            table_id=table_id,
-            dbt_alias=dbt_alias,
-            dbt_command="run/test",
-            disable_elementary=False,
-            upstream_tasks=[wait_upload_table],
-        )
         with case(materialize_after_dump, True):
-            wait_upload_prod = create_table_prod_gcs_and_run_dbt(
+            wait_upload_prod = create_table_prod_postgres(
                 data_path=output_filepath,
                 dataset_id=dataset_id,
                 table_id=table_id,
                 dump_mode="append",
-                upstream_tasks=[wait_for_materialization],
+                schema="public",
+                upstream_tasks=[wait_upload_table],
             )
 
             update_django_metadata(
@@ -242,30 +234,23 @@ with Flow(
             max_last_modified_date=max_last_modified_date,
         )
 
-        wait_upload_table = create_table_dev_and_upload_to_gcs(
+        wait_upload_table = create_table_dev_postgres(
             data_path=output_filepath,
             dataset_id=dataset_id,
             table_id=table_id,
             dump_mode="append",
+            schema="dev",
             upstream_tasks=[output_filepath],
         )
 
-        wait_for_materialization = run_dbt(
-            dataset_id=dataset_id,
-            table_id=table_id,
-            dbt_alias=dbt_alias,
-            dbt_command="run/test",
-            disable_elementary=False,
-            upstream_tasks=[wait_upload_table],
-        )
-
         with case(materialize_after_dump, True):
-            wait_upload_prod = create_table_prod_gcs_and_run_dbt(
+            wait_upload_prod = create_table_prod_postgres(
                 data_path=output_filepath,
                 dataset_id=dataset_id,
                 table_id=table_id,
                 dump_mode="append",
-                upstream_tasks=[wait_for_materialization],
+                schema="public",
+                upstream_tasks=[wait_upload_table],
             )
 
             wait_for_update_django_metadata = update_django_metadata(
@@ -277,30 +262,6 @@ with Flow(
                 time_delta={"months": 6},
                 bq_project="basedosdados",
                 upstream_tasks=[wait_upload_prod],
-            )
-
-            ## atualiza o diretório de empresas
-            wait_for_second_materialization = run_dbt(
-                dataset_id="br_bd_diretorios_brasil",
-                table_id="empresa",
-                dbt_alias=dbt_alias,
-                upstream_tasks=[wait_for_update_django_metadata],
-            )
-
-            wait_for_second_dowload_data_to_gcs = download_data_to_gcs(
-                dataset_id=dataset_id,
-                table_id=table_id,
-                upstream_tasks=[wait_for_second_materialization],
-            )
-
-            update_django_metadata(
-                dataset_id="br_bd_diretorios_brasil",
-                table_id="empresa",
-                date_column_name={"date": "data"},
-                date_format="%Y-%m-%d",
-                coverage_type="all_bdpro",
-                bq_project="basedosdados",
-                upstream_tasks=[wait_for_second_dowload_data_to_gcs],
             )
 
 
@@ -352,29 +313,23 @@ with Flow(
             max_folder_date=max_folder_date,
             max_last_modified_date=max_last_modified_date,
         )
-        wait_upload_table = create_table_dev_and_upload_to_gcs(
+        wait_upload_table = create_table_dev_postgres(
             data_path=output_filepath,
             dataset_id=dataset_id,
             table_id=table_id,
             dump_mode="append",
+            schema="dev",
             upstream_tasks=[output_filepath],
         )
 
-        wait_for_materialization = run_dbt(
-            dataset_id=dataset_id,
-            table_id=table_id,
-            dbt_command="run/test",
-            dbt_alias=dbt_alias,
-            upstream_tasks=[wait_upload_table],
-        )
-
         with case(materialize_after_dump, True):
-            wait_upload_prod = create_table_prod_gcs_and_run_dbt(
+            wait_upload_prod = create_table_prod_postgres(
                 data_path=output_filepath,
                 dataset_id=dataset_id,
                 table_id=table_id,
                 dump_mode="append",
-                upstream_tasks=[wait_for_materialization],
+                schema="public",
+                upstream_tasks=[wait_upload_table],
             )
 
             update_django_metadata(

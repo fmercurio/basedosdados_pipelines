@@ -81,7 +81,9 @@ def read_csv():
                 )
             elif arquivo.endswith(".csv"):
                 df = pd.read_csv(
-                    stf_constants.STF_INPUT.value + arquivo, dtype=str
+                    stf_constants.STF_INPUT.value + arquivo,
+                    dtype=str,
+                    encoding="latin-1",
                 )
         except FileNotFoundError:
             log(
@@ -170,7 +172,9 @@ def check_for_data():
                 )
             elif arquivo.endswith(".csv"):
                 df = pd.read_csv(
-                    stf_constants.STF_INPUT.value + arquivo, dtype=str
+                    stf_constants.STF_INPUT.value + arquivo,
+                    dtype=str,
+                    encoding="latin-1",
                 )
         except FileNotFoundError:
             log(

@@ -150,9 +150,9 @@ def chunk_range(content_length: int, chunk_size: int) -> list[tuple[int, int]]:
 async def download(
     url,
     chunk_size=15 * 1024 * 1024,
-    max_retries=5,
-    max_parallel=12,
-    timeout=5 * 60,
+    max_retries=8,
+    max_parallel=8,
+    timeout=10 * 60,
 ):
     """
     Downloads a file from a URL asynchronously, splitting it into chunks for parallel downloading.
@@ -293,13 +293,18 @@ async def download_chunk(
                 )
 
                 return response.content
-            except HTTPError:
-                delay = 2**attempt
+            except HTTPError as e:
+                is_last_attempt = attempt == max_retries - 1
+                delay = min(
+                    2**attempt * 5, 300
+                )  # Exponential backoff: 5s, 10s, 20s, 40s, 80s (max 5min)
                 log(
                     f"Falha no download do chunk {chunk_range[0]}-{chunk_range[1]} "
-                    f"na tentativa {attempt + 1}. Retentando em {delay} segundos..."
+                    f"na tentativa {attempt + 1}/{max_retries}: {e!s}"
                 )
-                await sleep(delay)
+                if not is_last_attempt:
+                    log(f"Retentando em {delay} segundos...")
+                    await sleep(delay)
 
         raise HTTPError(
             f"Download do chunk {chunk_range[0]}-{chunk_range[1]} falhou após {max_retries} tentativas"
